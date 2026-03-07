@@ -291,7 +291,7 @@
 
   const submitButton = widget.querySelector(".sc-submit");
 
-  submitButton.addEventListener("click", () => {
+  submitButton.addEventListener("click", async () => {
 
     const typeSelected = widget.querySelector(".sc-type-btn.active").innerText;
     const email = widget.querySelector('input[type="email"]').value;
@@ -306,9 +306,34 @@
       type: typeSelected
     };
 
-    console.log("Ticket data:", ticketData);
-    alert("Ticket capturado (simulación Día 2)");
+    try {
+      const response = await fetch("http://localhost:3000/public/tickets", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(ticketData)
+      });
 
+      if (!response.ok) {
+        throw new Error("Error al crear el ticket");
+      }
+
+      const data = await response.json();
+      const referenceCode = data.referenceCode;
+
+      widget.querySelector(".sc-body").innerHTML = `
+        <div style="text-align:center;padding:20px;">
+          <h3>✅ Ticket creado</h3>
+          <p>Guarda este código para rastrear tu solicitud:</p>
+          <strong style="font-size:18px;">${referenceCode}</strong>
+        </div>
+      `;
+
+    } catch (error) {
+      alert("No pudimos enviar tu ticket. Intenta nuevamente más tarde.");
+      console.error(error);
+    }
   });
 
 })();
