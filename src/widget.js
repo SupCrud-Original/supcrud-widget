@@ -223,10 +223,18 @@
 
       <div class="sc-view" id="sc-view-rastrear" style="display:none">
 
-          <label class="sc-label">Código de Referencia</label>
-          <input class="sc-input" type="text" placeholder="SC-XXXX-XXXXX">
+          <label class="sc-label">Código de seguimiento</label>
+          <input
+              class="sc-input"
+              id="sc-input-codigo"
+              type="text"
+              placeholder="SUP-XXXXXXXX"
+              style="text-transform:uppercase;"
+          >
 
-          <button class="sc-submit">Buscar</button>
+          <button class="sc-submit" id="sc-btn-rastrear">Buscar</button>
+
+          <div id="sc-resultado-rastreo" style="display:none; margin-top:12px;"></div>
 
       </div>
 
@@ -293,21 +301,33 @@
 
   submitButton.addEventListener("click", async () => {
 
-    const typeSelected = widget.querySelector(".sc-type-btn.active").innerText;
-    const email = widget.querySelector('input[type="email"]').value;
-    const subject = widget.querySelectorAll(".sc-input")[1].value;
-    const description = widget.querySelector(".sc-textarea").value;
+    // Mapear el texto del botón al código que espera el backend
+    const typeMap = { 'Petición': 'P', 'Queja': 'Q', 'Reclamo': 'R', 'Sug.': 'S' };
+    const typeText = widget.querySelector(".sc-type-btn.active").innerText;
+    const type = typeMap[typeText] || 'P';
+
+    const email       = widget.querySelector('input[type="email"]').value.trim();
+    const subject     = widget.querySelectorAll(".sc-input")[1].value.trim();
+    const description = widget.querySelector(".sc-textarea").value.trim();
+
+    // Validación básica
+    if (!email || !subject || !description) {
+      alert("Por favor completa todos los campos.");
+      return;
+    }
 
     const ticketData = {
-      workspaceKey,
-      email,
+      submitterEmail: email,
+      submitterName:  email,
       subject,
       description,
-      type: typeSelected
+      type
     };
 
     try {
-      const response = await fetch("http://localhost:3000/public/tickets", {
+      const response = await fetch(
+        `https://supcrud-backend-production.up.railway.app/api/public/tickets/${workspaceKey}`,
+        {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
@@ -334,6 +354,80 @@
       alert("No pudimos enviar tu ticket. Intenta nuevamente más tarde.");
       console.error(error);
     }
+  });
+
+  // ── Rastrear ticket ──────────────────────────────────
+  const btnRastrear = widget.querySelector("#sc-btn-rastrear");
+
+  btnRastrear.addEventListener("click", async () => {
+
+    const codigo     = widget.querySelector("#sc-input-codigo").value.trim().toUpperCase();
+    const resultado  = widget.querySelector("#sc-resultado-rastreo");
+
+    if (!codigo) {
+      alert("Ingresa tu código de seguimiento.");
+      return;
+    }
+
+    btnRastrear.textContent = "Buscando...";
+    btnRastrear.disabled    = true;
+
+    try {
+      const response = await fetch(
+        `https://supcrud-backend-production.up.railway.app/api/public/tickets/${codigo}`
+      );
+
+      const data = await response.json();
+
+      if (!response.ok || data.success === false) {
+        resultado.style.display     = "block";
+        resultado.style.background  = "#FEF2F2";
+        resultado.style.padding     = "12px";
+        resultado.style.borderRadius = "8px";
+        resultado.style.color       = "#DC2626";
+        resultado.style.fontSize    = "13px";
+        resultado.innerHTML = "No encontramos un ticket con ese código.";
+        return;
+      }
+
+      const ticket     = data.data || data;
+      const estadoMap  = {
+        OPEN:        "Abierto",
+        IN_PROGRESS: "En progreso",
+        RESOLVED:    "Resuelto",
+        CLOSED:      "Cerrado",
+        REOPENED:    "Reabierto"
+      };
+      const estado = estadoMap[ticket.status] || ticket.status;
+
+      resultado.style.display      = "block";
+      resultado.style.background   = "#F0F9FF";
+      resultado.style.padding      = "12px";
+      resultado.style.borderRadius = "8px";
+      resultado.style.fontSize     = "13px";
+      resultado.style.color        = "#1A1A2E";
+      resultado.innerHTML = `
+        <p style="margin:0 0 6px;font-weight:600;">${ticket.subject || "(Sin asunto)"}</p>
+        <p style="margin:0 0 4px;">Estado: <strong>${estado}</strong></p>
+        <p style="margin:0;color:#6B7280;font-size:12px;">
+          Para ver el detalle completo visita
+          <a href="https://crudzaso.github.io/supcrud-frontend/consulta.html?ref=${ticket.referenceCode}"
+             target="_blank"
+             style="color:#4A90D9;">
+            este enlace
+          </a>
+        </p>
+      `;
+
+    } catch (error) {
+      resultado.style.display  = "block";
+      resultado.innerHTML      = "Error de conexión. Intenta más tarde.";
+      console.error(error);
+    } finally {
+      btnRastrear.textContent = "Buscar";
+      btnRastrear.disabled    = false;
+    }
+
   });
 
 })();
