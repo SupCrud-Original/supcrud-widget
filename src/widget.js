@@ -2,7 +2,6 @@
   //Estilos de CSS.
 
   function injectStyles() {
-
     const css = `
 
     .sc-widget-button {
@@ -152,7 +151,7 @@
 
     `;
 
-    const style = document.createElement("style");
+    const style = document.createElement('style');
     style.innerHTML = css;
 
     document.head.appendChild(style);
@@ -163,22 +162,22 @@
   //Leer el workspace del script tag
 
   const scriptTag = document.currentScript;
-  const workspaceKey = scriptTag.getAttribute("data-workspace");
+  const workspaceKey = scriptTag.getAttribute('data-workspace');
 
-  console.log("SupCrud widget loaded for workspace:", workspaceKey);
+  console.log('SupCrud widget loaded for workspace:', workspaceKey);
 
   //Crear botón flotante
 
-  const button = document.createElement("button");
-  button.className = "sc-widget-button";
-  button.innerHTML = "💬 Soporte";
+  const button = document.createElement('button');
+  button.className = 'sc-widget-button';
+  button.innerHTML = '💬 Soporte';
 
   document.body.appendChild(button);
 
   //Crear contenedor del widget
 
-  const widget = document.createElement("div");
-  widget.className = "sc-widget-container";
+  const widget = document.createElement('div');
+  widget.className = 'sc-widget-container';
 
   widget.innerHTML = `
 
@@ -217,7 +216,7 @@
           <label class="sc-label">Descripción</label>
           <textarea class="sc-textarea" placeholder="Cuéntanos más detalles..."></textarea>
 
-          <button class="sc-submit">Enviar Ticket</button>
+          <button class="sc-submit" id="sc-btn-enviar">Enviar Ticket</button>
 
       </div>
 
@@ -251,126 +250,118 @@
   //Abrir - Cerrar widget
 
   button.onclick = () => {
-      widget.style.display = "block";
+    widget.style.display = 'block';
   };
 
-  widget.querySelector(".sc-close").onclick = () => {
-      widget.style.display = "none";
+  widget.querySelector('.sc-close').onclick = () => {
+    widget.style.display = 'none';
   };
 
   //Tabs
 
-  const tabs = widget.querySelectorAll(".sc-tab");
+  const tabs = widget.querySelectorAll('.sc-tab');
 
-  tabs.forEach(tab => {
+  tabs.forEach((tab) => {
+    tab.addEventListener('click', () => {
+      tabs.forEach((t) => t.classList.remove('sc-tab-active'));
+      tab.classList.add('sc-tab-active');
 
-      tab.addEventListener("click", () => {
+      const tabName = tab.dataset.tab;
 
-          tabs.forEach(t => t.classList.remove("sc-tab-active"));
-          tab.classList.add("sc-tab-active");
-
-          const tabName = tab.dataset.tab;
-
-          document.querySelector("#sc-view-nuevo").style.display = "none";
-          document.querySelector("#sc-view-rastrear").style.display = "none";
-
-          document.querySelector("#sc-view-" + tabName).style.display = "block";
-
-      });
-
+      widget.querySelector('#sc-view-nuevo').style.display = 'none';
+      widget.querySelector('#sc-view-rastrear').style.display = 'none';
+      widget.querySelector('#sc-view-' + tabName).style.display = 'block';
+    });
   });
 
   //Selector PQRS
 
-  const typeButtons = widget.querySelectorAll(".sc-type-btn");
+  const typeButtons = widget.querySelectorAll('.sc-type-btn');
 
-  typeButtons.forEach(btn => {
-
-      btn.addEventListener("click", () => {
-
-          typeButtons.forEach(b => b.classList.remove("active"));
-          btn.classList.add("active");
-
-      });
-
+  typeButtons.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      typeButtons.forEach((b) => b.classList.remove('active'));
+      btn.classList.add('active');
+    });
   });
 
   //Capturar envío del formulario
 
-  const submitButton = widget.querySelector(".sc-submit");
+  const submitButton = widget.querySelector('#sc-btn-enviar');
 
-  submitButton.addEventListener("click", async () => {
-
+  submitButton.addEventListener('click', async () => {
     // Mapear el texto del botón al código que espera el backend
-    const typeMap = { 'Petición': 'P', 'Queja': 'Q', 'Reclamo': 'R', 'Sug.': 'S' };
-    const typeText = widget.querySelector(".sc-type-btn.active").innerText;
+    const typeMap = { Petición: 'P', Queja: 'Q', Reclamo: 'R', 'Sug.': 'S' };
+    const typeText = widget.querySelector('.sc-type-btn.active').innerText;
     const type = typeMap[typeText] || 'P';
 
-    const email       = widget.querySelector('input[type="email"]').value.trim();
-    const subject     = widget.querySelectorAll(".sc-input")[1].value.trim();
-    const description = widget.querySelector(".sc-textarea").value.trim();
+    const email = widget.querySelector('input[type="email"]').value.trim();
+    const subject = widget.querySelectorAll('.sc-input')[1].value.trim();
+    const description = widget.querySelector('.sc-textarea').value.trim();
 
     // Validación básica
     if (!email || !subject || !description) {
-      alert("Por favor completa todos los campos.");
+      alert('Por favor completa todos los campos.');
       return;
     }
 
     const ticketData = {
       submitterEmail: email,
-      submitterName:  email,
+      submitterName: email,
       subject,
       description,
-      type
+      type,
     };
 
     try {
       const response = await fetch(
         `https://supcrud-backend-production.up.railway.app/api/public/tickets/${workspaceKey}`,
         {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify(ticketData)
-      });
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(ticketData),
+        }
+      );
 
       if (!response.ok) {
-        throw new Error("Error al crear el ticket");
+        throw new Error('Error al crear el ticket');
       }
 
       const data = await response.json();
       const referenceCode = data.referenceCode;
 
-      widget.querySelector(".sc-body").innerHTML = `
+      widget.querySelector('.sc-body').innerHTML = `
         <div style="text-align:center;padding:20px;">
           <h3>✅ Ticket creado</h3>
           <p>Guarda este código para rastrear tu solicitud:</p>
           <strong style="font-size:18px;">${referenceCode}</strong>
         </div>
       `;
-
     } catch (error) {
-      alert("No pudimos enviar tu ticket. Intenta nuevamente más tarde.");
+      alert('No pudimos enviar tu ticket. Intenta nuevamente más tarde.');
       console.error(error);
     }
   });
 
   // ── Rastrear ticket ──────────────────────────────────
-  const btnRastrear = widget.querySelector("#sc-btn-rastrear");
+  const btnRastrear = widget.querySelector('#sc-btn-rastrear');
 
-  btnRastrear.addEventListener("click", async () => {
-
-    const codigo     = widget.querySelector("#sc-input-codigo").value.trim().toUpperCase();
-    const resultado  = widget.querySelector("#sc-resultado-rastreo");
+  btnRastrear.addEventListener('click', async () => {
+    const codigo = widget
+      .querySelector('#sc-input-codigo')
+      .value.trim()
+      .toUpperCase();
+    const resultado = widget.querySelector('#sc-resultado-rastreo');
 
     if (!codigo) {
-      alert("Ingresa tu código de seguimiento.");
+      alert('Ingresa tu código de seguimiento.');
       return;
     }
 
-    btnRastrear.textContent = "Buscando...";
-    btnRastrear.disabled    = true;
+    btnRastrear.textContent = 'Buscando...';
+    btnRastrear.disabled = true;
 
     try {
       const response = await fetch(
@@ -380,34 +371,34 @@
       const data = await response.json();
 
       if (!response.ok || data.success === false) {
-        resultado.style.display     = "block";
-        resultado.style.background  = "#FEF2F2";
-        resultado.style.padding     = "12px";
-        resultado.style.borderRadius = "8px";
-        resultado.style.color       = "#DC2626";
-        resultado.style.fontSize    = "13px";
-        resultado.innerHTML = "No encontramos un ticket con ese código.";
+        resultado.style.display = 'block';
+        resultado.style.background = '#FEF2F2';
+        resultado.style.padding = '12px';
+        resultado.style.borderRadius = '8px';
+        resultado.style.color = '#DC2626';
+        resultado.style.fontSize = '13px';
+        resultado.innerHTML = 'No encontramos un ticket con ese código.';
         return;
       }
 
-      const ticket     = data.data || data;
-      const estadoMap  = {
-        OPEN:        "Abierto",
-        IN_PROGRESS: "En progreso",
-        RESOLVED:    "Resuelto",
-        CLOSED:      "Cerrado",
-        REOPENED:    "Reabierto"
+      const ticket = data.data || data;
+      const estadoMap = {
+        OPEN: 'Abierto',
+        IN_PROGRESS: 'En progreso',
+        RESOLVED: 'Resuelto',
+        CLOSED: 'Cerrado',
+        REOPENED: 'Reabierto',
       };
       const estado = estadoMap[ticket.status] || ticket.status;
 
-      resultado.style.display      = "block";
-      resultado.style.background   = "#F0F9FF";
-      resultado.style.padding      = "12px";
-      resultado.style.borderRadius = "8px";
-      resultado.style.fontSize     = "13px";
-      resultado.style.color        = "#1A1A2E";
+      resultado.style.display = 'block';
+      resultado.style.background = '#F0F9FF';
+      resultado.style.padding = '12px';
+      resultado.style.borderRadius = '8px';
+      resultado.style.fontSize = '13px';
+      resultado.style.color = '#1A1A2E';
       resultado.innerHTML = `
-        <p style="margin:0 0 6px;font-weight:600;">${ticket.subject || "(Sin asunto)"}</p>
+        <p style="margin:0 0 6px;font-weight:600;">${ticket.subject || '(Sin asunto)'}</p>
         <p style="margin:0 0 4px;">Estado: <strong>${estado}</strong></p>
         <p style="margin:0;color:#6B7280;font-size:12px;">
           Para ver el detalle completo visita
@@ -418,16 +409,13 @@
           </a>
         </p>
       `;
-
     } catch (error) {
-      resultado.style.display  = "block";
-      resultado.innerHTML      = "Error de conexión. Intenta más tarde.";
+      resultado.style.display = 'block';
+      resultado.innerHTML = 'Error de conexión. Intenta más tarde.';
       console.error(error);
     } finally {
-      btnRastrear.textContent = "Buscar";
-      btnRastrear.disabled    = false;
+      btnRastrear.textContent = 'Buscar';
+      btnRastrear.disabled = false;
     }
-
   });
-
 })();
